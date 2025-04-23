@@ -191,17 +191,22 @@ lock_init (struct lock *lock)
 void
 lock_acquire (struct lock *lock)
 {
-  ASSERT (lock != NULL);
-  ASSERT (!intr_context ());
-  ASSERT (!lock_held_by_current_thread (lock));
-  
-  thread_current()->waiting_lock = lock;
-  if(lock->holder!= NULL)
-    list_insert_ordered(&lock->holder->donations,&thread_current()->donation_elem,thread_priority_comparator,NULL);
-  donate_priority();
+  struct thread *current = thread_current();
+  ASSERT(lock != NULL);
+
+  // If the lock is already held, donate priority
+  if (lock->holder != NULL) {
+    struct thread *holder = lock->holder;
+    if (current->priority > holder->priority) {
+      holder->priority = current->priority;
+      list_insert_ordered(&holder->donations, &current->donation_elem, thread_priority_comparator, NULL);
+    }
+  }
+
+  // Acquire the lock (assuming sema_down and other lock acquire mechanics are already defined)
   sema_down(&lock->semaphore);
-  thread_current()->waiting_lock = NULL;
-  lock->holder = thread_current();
+  lock->holder = current;
+  current->waiting_lock = NULL;
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -359,16 +364,16 @@ remove_with_lock(struct lock *lock) {
 }
 
 void
-refresh_priority(void) {
-    // struct thread *curr = thread_current();
-    // curr->priority = curr->initial_priority;
+refresh_priority(void)
+{
+  struct thread *t = thread_current();
+  t->priority = t->initial_priority;
 
-    // if (!list_empty(&curr->donations)) {
-    //     list_sort(&curr->donations, thread_priority_comparator, NULL);
-    //     struct thread *highest = list_entry(list_front(&curr->donations), struct thread, donation_elem);
-
-    //     if (highest->priority > curr->priority) {
-    //         curr->priority = highest->priority;
-    //     }
-    // }
+  if (!list_empty(&t->donations)) {
+    list_sort(&t->donations, thread_priority_comparator, NULL);
+    struct thread *highest = list_entry(list_front(&t->donations), struct thread, donation_elem);
+    if (highest->priority > t->priority) {
+      t->priority = highest->priority;
+    }
+  }
 }
