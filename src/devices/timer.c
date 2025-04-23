@@ -93,15 +93,20 @@ timer_elapsed (int64_t then)
 
 /* Sleeps for approximately TICKS timer ticks.  Interrupts must
    be turned on. */
-void
-timer_sleep (int64_t ticks) 
-{
-  int64_t wake_up_time = timer_ticks() + ticks;
-  thread_current()->wake_up_time = wake_up_time;
-  list_insert_ordered(&sleep_list, thread_current(), wake_up_time_comparator, NULL);
-    // block the thread
-    thread_block();
-}
+   void
+   timer_sleep (int64_t ticks) {
+     enum intr_level old_level = intr_disable ();
+   
+     int64_t wake_up_time = timer_ticks () + ticks;
+     struct thread *t = thread_current ();
+     t->wake_up_time = wake_up_time;
+     list_insert_ordered (&sleep_list, &t->elem, wake_up_time_comparator, NULL);
+   
+     thread_block ();
+   
+     intr_set_level (old_level);
+   }
+   
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
    turned on. */
