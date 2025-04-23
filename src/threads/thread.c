@@ -92,12 +92,13 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
-
+  list_init(&initial_thread->donations);
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
   init_thread (initial_thread, "main", PRI_DEFAULT);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
+
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -336,6 +337,7 @@ void
 thread_set_priority (int new_priority) 
 {
   thread_current ()->priority = new_priority;
+  thread_current()->initial_priority = new_priority;
 }
 
 /* Returns the current thread's priority. */
@@ -456,11 +458,12 @@ init_thread (struct thread *t, const char *name, int priority)
   ASSERT (t != NULL);
   ASSERT (PRI_MIN <= priority && priority <= PRI_MAX);
   ASSERT (name != NULL);
-
   memset (t, 0, sizeof *t);
+   list_init(&t->donations);
   t->status = THREAD_BLOCKED;
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
+  t->initial_priority = priority;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
 
@@ -487,14 +490,29 @@ alloc_frame (struct thread *t, size_t size)
    empty.  (If the running thread can continue running, then it
    will be in the run queue.)  If the run queue is empty, return
    idle_thread. */
-static struct thread *
-next_thread_to_run (void) 
+   static struct thread *
+next_thread_to_run (void)
 {
-  if (list_empty (&ready_list))
+  if (list_empty(&ready_list))
     return idle_thread;
+
+#ifdef USERPROG
+  if (thread_mlfqs)
+  {
+    // If MLFQS is active, ready_list should already be sorted by priority.
+    // Just pop the front.
+    return list_entry(list_pop_front(&ready_list), struct thread, elem);
+  }
   else
-    return list_entry (list_pop_front (&ready_list), struct thread, elem);
+#endif
+  {
+    // If not using MLFQS, manually select the highest priority thread.
+    struct list_elem *max_elem = list_max(&ready_list, thread_priority_comparator, NULL);
+    list_remove(max_elem);
+    return list_entry(max_elem, struct thread, elem);
+  }
 }
+   
 
 /* Completes a thread switch by activating the new thread's page
    tables, and, if the previous thread is dying, destroying it.
@@ -582,3 +600,23 @@ allocate_tid (void)
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+//comparator to check which thread has the highest priority
+bool thread_priority_comparator(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED) {
+  struct thread *thread_a = list_entry(a, struct thread, elem);
+  struct thread *thread_b = list_entry(b, struct thread, elem);
+  return thread_a->priority <thread_b->priority;
+}
+
+//donates the priority of the current thread to the thread that is waiting on the lock
+void donate_priority(void)
+{
+  struct thread *current = thread_current();
+  struct lock *lock = current->waiting_lock;
+  while (lock!=NULL && lock->holder != NULL && current->priority > lock->holder->priority)
+  {
+    printf("Donating priority: current->priority = %d to lock holder's priority = %d\n", current->priority, lock->holder->priority);
+    lock->holder->priority = current->priority;
+    current = lock->holder;
+    lock = current->waiting_lock;
+  }
+}

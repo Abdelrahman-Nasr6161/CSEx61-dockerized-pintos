@@ -31,7 +31,6 @@
 #include <string.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
-
 /* Initializes semaphore SEMA to VALUE.  A semaphore is a
    nonnegative integer along with two atomic operators for
    manipulating it:
@@ -195,9 +194,14 @@ lock_acquire (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
-
-  sema_down (&lock->semaphore);
-  lock->holder = thread_current ();
+  
+  thread_current()->waiting_lock = lock;
+  if(lock->holder!= NULL)
+    list_insert_ordered(&lock->holder->donations,&thread_current()->donation_elem,thread_priority_comparator,NULL);
+  donate_priority();
+  sema_down(&lock->semaphore);
+  thread_current()->waiting_lock = NULL;
+  lock->holder = thread_current();
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -232,6 +236,8 @@ lock_release (struct lock *lock)
   ASSERT (lock_held_by_current_thread (lock));
 
   lock->holder = NULL;
+  remove_with_lock(lock);
+  refresh_priority();
   sema_up (&lock->semaphore);
 }
 
@@ -335,4 +341,34 @@ cond_broadcast (struct condition *cond, struct lock *lock)
 
   while (!list_empty (&cond->waiters))
     cond_signal (cond, lock);
+}
+
+void
+remove_with_lock(struct lock *lock) {
+  
+  struct list *donations = &thread_current()->donations;
+  if(list_empty(donations)) return;
+  struct list_elem *e = list_begin(donations);
+
+  while (e != list_end(donations)) {
+    struct thread *t = list_entry(e, struct thread, donation_elem);
+    struct thread *next = list_next(e);
+    e = (struct list_elem *)next;
+    break;
+  }
+}
+
+void
+refresh_priority(void) {
+    // struct thread *curr = thread_current();
+    // curr->priority = curr->initial_priority;
+
+    // if (!list_empty(&curr->donations)) {
+    //     list_sort(&curr->donations, thread_priority_comparator, NULL);
+    //     struct thread *highest = list_entry(list_front(&curr->donations), struct thread, donation_elem);
+
+    //     if (highest->priority > curr->priority) {
+    //         curr->priority = highest->priority;
+    //     }
+    // }
 }

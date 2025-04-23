@@ -99,7 +99,16 @@ struct thread
 #endif
    int64_t wake_up_time;
     /* Owned by thread.c. */
+    int niceness;
+    int recent_cpu;  
+    struct lock *waiting_lock;
+    struct list donations;
+    struct list_elem donation_elem;
+    int initial_priority;
+    bool need_priority_refresh;
     unsigned magic;                     /* Detects stack overflow. */
+
+    
   };
 
 /* If false (default), use round-robin scheduler.
@@ -107,6 +116,8 @@ struct thread
    Controlled by kernel command-line option "-o mlfqs". */
 extern bool thread_mlfqs;
 
+bool thread_priority_comparator(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
+void donate_priority(void);
 void thread_init (void);
 void thread_start (void);
 
