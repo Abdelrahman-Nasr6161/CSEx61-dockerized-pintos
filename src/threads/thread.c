@@ -342,9 +342,13 @@ thread_set_priority(int new_priority)
   refresh_priority();
 
   if (!list_empty(&ready_list)) {
-    struct thread *front = list_entry(list_front(&ready_list), struct thread, elem);
-    if (curr->priority < front->priority) {
-      thread_yield();  // Must yield so the higher priority thread can run
+    struct list_elem *e;
+    for (e = list_begin(&ready_list); e != list_end(&ready_list); e = list_next(e)) {
+      struct thread *t = list_entry(e, struct thread, elem);
+      if (t->priority > curr->priority) {
+        thread_yield();  // Yield if there's a higher-priority thread ready
+        break;  // We can exit early since we know we should yield
+      }
     }
   }
 }
