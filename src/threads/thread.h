@@ -117,7 +117,7 @@ struct thread
 extern bool thread_mlfqs;
 
 bool thread_priority_comparator(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
-void donate_priority(void);
+
 void thread_init (void);
 void thread_start (void);
 

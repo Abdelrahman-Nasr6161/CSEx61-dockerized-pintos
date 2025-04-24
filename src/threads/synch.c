@@ -194,11 +194,10 @@ lock_init (struct lock *lock)
      ASSERT (lock != NULL);
      ASSERT (!intr_context ());
      ASSERT (!lock_held_by_current_thread (lock));
-      if(lock->holder!=NULL)
-      {
-        donate_priority();
-      }
+     thread_current()->waiting_lock = lock; 
+     donate_priority();
      sema_down (&lock->semaphore);
+     thread_current()->waiting_lock = NULL;
      lock->holder = thread_current ();
    }
 
@@ -369,5 +368,24 @@ refresh_priority(void)
       t->priority = highest->priority;
       thread_yield();
     }
+  }
+}
+void donate_priority(void) {
+  struct thread *current = thread_current();
+  struct lock *lock = current->waiting_lock;
+
+  // Loop to propagate the donation up the chain of lock holders
+  while (lock != NULL && lock->holder != NULL && current->priority > lock->holder->priority) {
+    struct thread *holder = lock->holder;
+
+    // Insert the current thread's donation into the lock holder's donations list, ordered by priority
+    list_insert_ordered(&holder->donations, &current->donation_elem, thread_priority_comparator, NULL);
+
+    // Update the lock holder's priority to reflect the higher priority of the current thread
+    holder->priority = current->priority;
+
+    // Move to the next lock in the chain
+    current = holder;
+    lock = current->waiting_lock;
   }
 }

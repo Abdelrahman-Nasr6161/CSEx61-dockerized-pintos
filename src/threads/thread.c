@@ -635,15 +635,3 @@ bool thread_priority_comparator(const struct list_elem *a, const struct list_ele
 }
 
 //donates the priority of the current thread to the thread that is waiting on the lock
-void donate_priority(void)
-{
-  struct thread *current = thread_current();
-  struct lock *lock = current->waiting_lock;
-  while (lock!=NULL && lock->holder != NULL && current->priority > lock->holder->priority)
-  {
-    list_insert_ordered(&lock->holder->donations,&current->donation_elem , thread_priority_comparator,NULL);
-    lock->holder->priority = current->priority;
-    current = lock->holder;
-    lock = current->waiting_lock;
-  }
-}
