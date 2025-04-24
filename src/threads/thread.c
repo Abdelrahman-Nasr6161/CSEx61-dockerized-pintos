@@ -300,21 +300,26 @@ thread_exit (void)
 
 /* Yields the CPU.  The current thread is not put to sleep and
    may be scheduled again immediately at the scheduler's whim. */
-void
-thread_yield (void) 
-{
-  struct thread *cur = thread_current ();
-  enum intr_level old_level;
-  
-  ASSERT (!intr_context ());
-
-  old_level = intr_disable ();
-  if (cur != idle_thread) 
-    list_push_back (&ready_list, &cur->elem);
-  cur->status = THREAD_READY;
-  schedule ();
-  intr_set_level (old_level);
-}
+   void
+   thread_yield (void) 
+   {
+     struct thread *cur = thread_current ();
+     enum intr_level old_level;
+     
+     ASSERT (!intr_context ());
+   
+     old_level = intr_disable ();
+     if (cur != idle_thread) {
+       if (thread_mlfqs) {
+         list_insert_ordered(&ready_list, &cur->elem, thread_priority_comparator, NULL);
+       } else {
+         list_push_back (&ready_list, &cur->elem);
+       }
+     }
+     cur->status = THREAD_READY;
+     schedule ();
+     intr_set_level (old_level);
+   }
 
 /* Invoke function 'func' on all threads, passing along 'aux'.
    This function must be called with interrupts off. */
@@ -631,7 +636,5 @@ uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 bool thread_priority_comparator(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED) {
   struct thread *thread_a = list_entry(a, struct thread, elem);
   struct thread *thread_b = list_entry(b, struct thread, elem);
-  return thread_a->priority <thread_b->priority;
+  return thread_a->priority < thread_b->priority;
 }
-
-//donates the priority of the current thread to the thread that is waiting on the lock

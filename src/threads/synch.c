@@ -382,10 +382,11 @@ void donate_priority(void) {
     list_insert_ordered(&holder->donations, &current->donation_elem, thread_priority_comparator, NULL);
 
     // Update the lock holder's priority to reflect the higher priority of the current thread
-    holder->priority = current->priority;
+    holder->priority = current->priority + 1;
 
     // Move to the next lock in the chain
     current = holder;
     lock = current->waiting_lock;
   }
+  thread_yield();
 }
