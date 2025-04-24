@@ -196,6 +196,7 @@ lock_init (struct lock *lock)
      ASSERT (!lock_held_by_current_thread (lock));
      thread_current()->waiting_lock = lock; 
      donate_priority();
+    //  thread_yield();
      sema_down (&lock->semaphore);
      thread_current()->waiting_lock = NULL;
      lock->holder = thread_current ();
@@ -350,8 +351,11 @@ remove_with_lock(struct lock *lock) {
   while (e != list_end(donations)) {
     struct thread *t = list_entry(e, struct thread, donation_elem);
     struct thread *next = list_next(e);
-    e = (struct list_elem *)next;
-    break;
+    if (t->waiting_lock == lock)
+    {
+      list_remove(e);
+    }
+    e = next;
   }
 }
 
@@ -361,14 +365,18 @@ refresh_priority(void)
   struct thread *t = thread_current();
   t->priority = t->initial_priority;
 
+  // Check if there are any donations
   if (!list_empty(&t->donations)) {
+    // Sort donations to find the highest priority donation
     list_sort(&t->donations, thread_priority_comparator, NULL);
-    struct thread *highest = list_entry(list_front(&t->donations), struct thread, donation_elem);
-    if (highest->priority > t->priority) {
+    struct thread *highest = list_entry(list_max(&t->donations,thread_priority_comparator,NULL), struct thread, donation_elem);
+    if (highest->priority > t->priority)
+    {
       t->priority = highest->priority;
-      thread_yield();
     }
+    
   }
+  thread_yield();
 }
 void donate_priority(void) {
   struct thread *current = thread_current();
@@ -382,11 +390,10 @@ void donate_priority(void) {
     list_insert_ordered(&holder->donations, &current->donation_elem, thread_priority_comparator, NULL);
 
     // Update the lock holder's priority to reflect the higher priority of the current thread
-    holder->priority = current->priority + 1;
+    holder->priority = current->priority ;
 
     // Move to the next lock in the chain
     current = holder;
     lock = current->waiting_lock;
   }
-  thread_yield();
 }
