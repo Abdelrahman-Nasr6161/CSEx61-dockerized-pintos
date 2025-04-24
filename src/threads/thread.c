@@ -416,7 +416,7 @@ thread_get_nice (void)
 int
 thread_get_load_avg (void) 
 {
-  return FP_TO_INT_ROUND(FP_MUL_INT(load_avg, 100));
+  return FP_TO_INT_ROUND(FP_MUL_INT(thread_current()->load_avg, 100));
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
