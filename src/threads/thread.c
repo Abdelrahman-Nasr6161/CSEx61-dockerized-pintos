@@ -201,7 +201,7 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
-
+  thread_yield();
   return tid;
 }
 
@@ -238,7 +238,8 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+  list_insert_ordered(&ready_list,&t->elem,thread_priority_comparator , NULL);
+  // list_push_back (&ready_list, &t->elem);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -640,7 +641,7 @@ void donate_priority(void)
   struct lock *lock = current->waiting_lock;
   while (lock!=NULL && lock->holder != NULL && current->priority > lock->holder->priority)
   {
-    printf("Donating priority: current->priority = %d to lock holder's priority = %d\n", current->priority, lock->holder->priority);
+    list_insert_ordered(&lock->holder->donations,&current->donation_elem , thread_priority_comparator,NULL);
     lock->holder->priority = current->priority;
     current = lock->holder;
     lock = current->waiting_lock;

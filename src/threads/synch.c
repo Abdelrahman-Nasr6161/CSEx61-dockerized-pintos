@@ -188,29 +188,19 @@ lock_init (struct lock *lock)
    interrupt handler.  This function may be called with
    interrupts disabled, but interrupts will be turned back on if
    we need to sleep. */
-void
-lock_acquire (struct lock *lock)
-{
-  struct thread *current = thread_current();
-  ASSERT(lock != NULL);
-  ASSERT(!lock_held_by_current_thread(lock));
-
-  current->waiting_lock = lock;
-
-  // Donate priority if necessary
-  struct lock *curr_lock = lock;
-  while (curr_lock && curr_lock->holder && current->priority > curr_lock->holder->priority) {
-    struct thread *holder = curr_lock->holder;
-    holder->priority = current->priority;
-    list_insert_ordered(&holder->donations, &current->donation_elem, thread_priority_comparator, NULL);
-    curr_lock = holder->waiting_lock;
-  }
-
-  // Actually acquire the lock
-  sema_down(&lock->semaphore);
-  lock->holder = current;
-  current->waiting_lock = NULL;
-}
+   void
+   lock_acquire (struct lock *lock)
+   {
+     ASSERT (lock != NULL);
+     ASSERT (!intr_context ());
+     ASSERT (!lock_held_by_current_thread (lock));
+      if(lock->holder!=NULL)
+      {
+        donate_priority();
+      }
+     sema_down (&lock->semaphore);
+     lock->holder = thread_current ();
+   }
 
 /* Tries to acquires LOCK and returns true if successful or false
    on failure.  The lock must not already be held by the current
@@ -377,6 +367,7 @@ refresh_priority(void)
     struct thread *highest = list_entry(list_front(&t->donations), struct thread, donation_elem);
     if (highest->priority > t->priority) {
       t->priority = highest->priority;
+      thread_yield();
     }
   }
 }

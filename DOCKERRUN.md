@@ -1,0 +1,1 @@
+sudo docker run --platform linux/amd64 --rm -it -v "$(pwd)/CSEx61-dockerized-pintos:/root/pintos" a85bf0a348d6
