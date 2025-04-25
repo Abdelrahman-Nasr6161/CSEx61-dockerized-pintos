@@ -455,7 +455,7 @@ refresh_priority(void)
   if (!list_empty(&t->donations)) {
     // Sort donations to find the highest priority donation
     list_sort(&t->donations, thread_priority_comparator, NULL);
-    struct thread *highest = list_entry(list_max(&t->donations,thread_priority_comparator,NULL), struct thread, donation_elem);
+    struct thread *highest = list_entry(list_back(&t->donations), struct thread, donation_elem);
     if (highest->priority > t->priority)
     {
       t->priority = highest->priority;
