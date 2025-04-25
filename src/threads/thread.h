@@ -102,6 +102,7 @@ struct thread
     int niceness;
     int recent_cpu;  
     struct lock *waiting_lock;
+    struct list locks;              /* List of locks held by the thread. */
     struct list donations;
     struct list_elem donation_elem;
     int initial_priority;
