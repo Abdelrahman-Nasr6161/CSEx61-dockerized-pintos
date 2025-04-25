@@ -492,9 +492,9 @@ cond_sema_priority_comparator(const struct list_elem *a,
   if (list_empty(&sema_a->semaphore.waiters)) return true;
   if (list_empty(&sema_b->semaphore.waiters)) return false;
 
-  struct thread *thread_a = list_entry(list_front(&sema_a->semaphore.waiters),
+  struct thread *thread_a = list_entry(list_max(&sema_a->semaphore.waiters,thread_priority_comparator,NULL),
                                        struct thread, elem);
-  struct thread *thread_b = list_entry(list_front(&sema_b->semaphore.waiters),
+  struct thread *thread_b = list_entry(list_max(&sema_b->semaphore.waiters,thread_priority_comparator,NULL),
                                        struct thread, elem);
 
   return thread_a->priority < thread_b->priority;
