@@ -450,6 +450,7 @@ refresh_priority(void)
 {
   if (thread_mlfqs) 
     return;
+    
   struct thread *t = thread_current();
   t->priority = t->initial_priority;
 

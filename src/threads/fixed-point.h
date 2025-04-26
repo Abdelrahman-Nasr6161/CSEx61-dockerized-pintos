@@ -4,42 +4,33 @@
 #include <stdint.h>  // For int64_t
 
 /* Fixed-point real number representation */
-typedef int fixed_t;
+typedef int32_t fixed_t;
 
-/* Number of fractional bits */
+/* Number of fractional bits (Q14.17 format would use 17, but we'll keep Q14 for compatibility) */
 #define F 16384  /* 1 << 14 */
 
-/* Convert n to fixed point */
-#define FP_INT_TO_FP(n) ((n) * (F))
+/* Conversion functions */
+#define FP_INT_TO_FP(n) ((fixed_t)((n) * (F)))
+#define FP_TO_INT_ZERO(x) ((int32_t)((x) / (F)))
+#define FP_TO_INT_NEAREST(x) ((int32_t)(((x) >= 0) ? (((x) + (F)/2)/(F)) : (((x) - (F)/2)/(F))))
+#define FP_TO_INT_ROUND(x) FP_TO_INT_NEAREST(x)  // Alias for clarity in MLFQS code
 
-/* Convert x to integer (rounding toward zero) */
-#define FP_TO_INT_ZERO(x) ((x) / (F))
+/* Arithmetic operations */
+#define FP_ADD(x, y) ((fixed_t)((x) + (y)))
+#define FP_SUB(x, y) ((fixed_t)((x) - (y)))
+#define FP_ADD_MIX(x, n) ((fixed_t)((x) + (n) * (F)))
+#define FP_SUB_MIX(x, n) ((fixed_t)((x) - (n) * (F)))
 
-/* Convert x to integer (rounding to nearest) */
-#define FP_TO_INT_NEAREST(x) (((x) >= 0) ? (((x) + (F)/2)/(F)) : (((x) - (F)/2)/(F)))
+/* Multiplication with overflow protection */
+#define FP_MULT(x, y) ((fixed_t)(((int64_t)(x) * (int64_t)(y)) / (F)))
+#define FP_MULT_MIX(x, n) ((fixed_t)((x) * (n)))
 
-/* Add x and y */
-#define FP_ADD(x, y) ((x) + (y))
+/* Division with overflow protection */
+#define FP_DIV(x, y) ((fixed_t)(((int64_t)(x) * (F)) / (int64_t)(y)))
+#define FP_DIV_MIX(x, n) ((fixed_t)((x) / (n)))
 
-/* Subtract y from x */
-#define FP_SUB(x, y) ((x) - (y))
-
-/* Add x and integer n */
-#define FP_ADD_MIX(x, n) ((x) + (n) * (F))
-
-/* Subtract integer n from x */
-#define FP_SUB_MIX(x, n) ((x) - (n) * (F))
-
-/* Multiply x by y (avoids overflow by using 64-bit intermediate) */
-#define FP_MULT(x, y) (((int64_t)(x) * (int64_t)(y)) / (F))
-
-/* Multiply x by integer n */
-#define FP_MULT_MIX(x, n) ((x) * (n))
-
-/* Divide x by y (avoids overflow by using 64-bit intermediate) */
-#define FP_DIV(x, y) (((int64_t)(x) * (F)) / (int64_t)(y))
-
-/* Divide x by integer n */
-#define FP_DIV_MIX(x, n) ((x) / (n))
+/* Additional MLFQS-specific operations */
+#define FP_FRAC_PART(x) ((x) & (F - 1))  // Get fractional part
+#define FP_INT_PART(x) ((x) / (F))       // Get integer part
 
 #endif /* FIXED_POINT_H */
