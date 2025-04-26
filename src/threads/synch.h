@@ -50,7 +50,9 @@ struct condition
   {
     struct list waiters;        /* List of waiting threads. */
   };
-
+  bool
+  cond_sema_priority_comparator(const struct list_elem *a,
+                                const struct list_elem *b);
 void cond_init (struct condition *);
 void cond_wait (struct condition *, struct lock *);
 void cond_signal (struct condition *, struct lock *);
@@ -60,6 +62,7 @@ remove_with_lock(struct lock *lock);
 void
 refresh_priority(void);
 void donate_priority(void);
+
 /* Optimization barrier.
 
    The compiler will not reorder operations across an
