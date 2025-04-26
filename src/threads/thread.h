@@ -99,6 +99,7 @@ struct thread
 #endif
    int64_t wake_up_time;
     /* Owned by thread.c. */
+   //  int niceness;
     int nice;
     int recent_cpu;  
     struct lock *waiting_lock;
