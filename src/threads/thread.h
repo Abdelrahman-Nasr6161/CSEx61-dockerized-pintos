@@ -107,7 +107,6 @@ struct thread
     struct list donations;
     struct list_elem donation_elem;
     int initial_priority;
-    int load_avg;
     bool need_priority_refresh;
     unsigned magic;                     /* Detects stack overflow. */
 

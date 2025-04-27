@@ -243,7 +243,7 @@ lock_acquire(struct lock *lock) {
       
       // Add to donations if not already there
       if (!found) {
-        list_push_back(&holder->donations, &cur->donation_elem);
+        list_insert_ordered(&holder->donations, &cur->donation_elem,thread_priority_comparator,NULL);
       }
       
       // Donate priority up the chain
@@ -381,7 +381,7 @@ cond_wait (struct condition *cond, struct lock *lock)
   ASSERT (lock_held_by_current_thread (lock));
   
   sema_init (&waiter.semaphore, 0);
-  list_push_back (&cond->waiters, &waiter.elem);
+  list_insert_ordered (&cond->waiters, &waiter.elem,cond_sema_priority_comparator,NULL);
   lock_release (lock);
   sema_down (&waiter.semaphore);
   lock_acquire (lock);
@@ -450,14 +450,11 @@ refresh_priority(void)
 {
   if (thread_mlfqs) 
     return;
-    
   struct thread *t = thread_current();
   t->priority = t->initial_priority;
 
   // Check if there are any donations
   if (!list_empty(&t->donations)) {
-    // Sort donations to find the highest priority donation
-    list_sort(&t->donations, thread_priority_comparator, NULL);
     struct thread *highest = list_entry(list_back(&t->donations), struct thread, donation_elem);
     if (highest->priority > t->priority)
     {
@@ -486,7 +483,6 @@ donate_priority(void) {
     }
   }
 }
-
 bool
 cond_sema_priority_comparator(const struct list_elem *a,
                               const struct list_elem *b) {
@@ -496,9 +492,9 @@ cond_sema_priority_comparator(const struct list_elem *a,
   if (list_empty(&sema_a->semaphore.waiters)) return true;
   if (list_empty(&sema_b->semaphore.waiters)) return false;
 
-  struct thread *thread_a = list_entry(list_max(&sema_a->semaphore.waiters,thread_priority_comparator,NULL),
+  struct thread *thread_a = list_entry(list_back(&sema_a->semaphore.waiters),
                                        struct thread, elem);
-  struct thread *thread_b = list_entry(list_max(&sema_b->semaphore.waiters,thread_priority_comparator,NULL),
+  struct thread *thread_b = list_entry(list_back(&sema_b->semaphore.waiters),
                                        struct thread, elem);
 
   return thread_a->priority < thread_b->priority;
