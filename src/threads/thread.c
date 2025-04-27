@@ -104,6 +104,7 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
+  list_init(&initial_thread->donations);
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -393,12 +394,23 @@ thread_set_priority (int new_priority)
 
   refresh_priority();
 
-  /* Check if we need to yield to a higher priority thread */
+  // DIFFERERNCE HERE
+  // /* Check if we need to yield to a higher priority thread */
+  // if (!list_empty(&ready_list)) {
+  //   struct list_elem *e = list_max(&ready_list, thread_priority_comparator, NULL);
+  //   struct thread *max_ready = list_entry(e, struct thread, elem);
+  //   if (max_ready->priority > curr->priority)
+  //     thread_yield();
+  //   }
   if (!list_empty(&ready_list)) {
-    struct list_elem *e = list_max(&ready_list, thread_priority_comparator, NULL);
-    struct thread *max_ready = list_entry(e, struct thread, elem);
-    if (max_ready->priority > curr->priority)
-      thread_yield();
+    struct list_elem *e;
+    for (e = list_begin(&ready_list); e != list_end(&ready_list); e = list_next(e)) {
+      struct thread *t = list_entry(e, struct thread, elem);
+      if (t->priority > curr->priority) {
+        thread_yield();  // Yield if there's a higher-priority thread ready
+        break;  // We can exit early since we know we should yield
+      }
+    }
   }
 }
 
@@ -652,6 +664,7 @@ alloc_frame (struct thread *t, size_t size)
   return t->stack;
 }
 
+// DIFFERENCE HERE
 /* Chooses and returns the next thread to be scheduled.  Should
    return a thread from the run queue, unless the run queue is
    empty.  (If the running thread can continue running, then it
@@ -767,35 +780,11 @@ thread_priority_comparator(const struct list_elem *a, const struct list_elem *b,
 {
   struct thread *thread_a = list_entry(a, struct thread, elem);
   struct thread *thread_b = list_entry(b, struct thread, elem);
-  return thread_a->priority > thread_b->priority;
+  if (thread_mlfqs) {
+    // For MLFQS, lower priority values come first in the list
+    return thread_a->priority > thread_b->priority;
+  } else {
+    // For regular priority scheduling, higher priority values come first
+    return thread_a->priority < thread_b->priority;
+  }
 }
-
-/* Refresh the priority of the current thread considering donations */
-// void
-// refresh_priority(void) 
-// {
-//   if (thread_mlfqs) 
-//     return;
-
-//   struct thread *t = thread_current();
-//   int old_priority = t->priority;
-  
-//   /* Priority is the max of initial priority and all donations */
-//   int new_priority = t->initial_priority;
-//   if (!list_empty(&t->donations)) {
-//     struct list_elem *e = list_max(&t->donations, thread_priority_comparator, NULL);
-//     struct thread *donor = list_entry(e, struct thread, donation_elem);
-//     if (donor->priority > new_priority)
-//       new_priority = donor->priority;
-//   }
-  
-//   t->priority = new_priority;
-  
-//   /* If priority increased, we might need to yield */
-//   if (new_priority > old_priority && !list_empty(&ready_list)) {
-//     struct list_elem *e = list_max(&ready_list, thread_priority_comparator, NULL);
-//     struct thread *max_ready = list_entry(e, struct thread, elem);
-//     if (max_ready->priority > new_priority)
-//       thread_yield();
-//   }
-// }

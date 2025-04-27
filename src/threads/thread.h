@@ -110,7 +110,6 @@ struct thread
     bool need_priority_refresh;
     unsigned magic;                     /* Detects stack overflow. */
 
-    
   };
 
 /* If false (default), use round-robin scheduler.
