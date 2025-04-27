@@ -99,9 +99,11 @@ struct thread
 #endif
    int64_t wake_up_time;
     /* Owned by thread.c. */
+   //  int niceness;
     int nice;
     int recent_cpu;  
     struct lock *waiting_lock;
+    struct list locks;              /* List of locks held by the thread. */
     struct list donations;
     struct list_elem donation_elem;
     int initial_priority;

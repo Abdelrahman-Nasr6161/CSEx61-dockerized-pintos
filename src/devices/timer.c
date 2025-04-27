@@ -194,6 +194,26 @@ timer_interrupt (struct intr_frame *args UNUSED)
     thread_unblock(t);
 }
 
+// /* MLFQS updates */
+// if (thread_mlfqs) {
+//   struct thread *curr = thread_current();
+
+//   if (curr != idle_thread) {
+//     curr->recent_cpu = FP_ADD_MIX(curr->recent_cpu, 1);
+//   }
+
+//   if (ticks % TIMER_FREQ == 0) {
+//     /* Every second: update load_avg and recent_cpu for all threads */
+//     mlfqs_update_load_avg();
+//     mlfqs_update_all_recent_cpu();
+//   }
+
+//   if (ticks % 4 == 0) {
+//     /* Every 4 ticks: update priorities */
+//     mlfqs_update_all_priorities();
+//   }
+// }
+
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
